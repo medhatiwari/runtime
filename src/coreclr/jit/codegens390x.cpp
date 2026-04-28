@@ -4724,7 +4724,7 @@ void CodeGen::genCodeForCompare(GenTreeOp* tree)
             cmpIns = (cmpSize == EA_8BYTE) ? INS_clgfi : INS_clfi;
         else if (imm >= -32768 && imm <= 32767)
 	    cmpIns = (cmpSize == EA_8BYTE) ? INS_cgfi : INS_chi;
-	else
+	    else
             cmpIns = (cmpSize == EA_8BYTE) ? INS_cgfi : INS_cfi;
         GetEmitter()->emitIns_R_I(cmpIns, cmpSize, op1->GetRegNum(), imm);
     }
