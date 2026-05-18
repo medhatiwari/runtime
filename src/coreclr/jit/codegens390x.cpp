@@ -774,9 +774,17 @@ void CodeGen::genCodeForTreeNode(GenTree* treeNode)
         {
             CodeGen::BarrierKind barrierKind =
                 treeNode->gtFlags & GTF_MEMORYBARRIER_LOAD ? BARRIER_LOAD_ONLY : BARRIER_FULL;
+<<<<<<< Updated upstream
             instGen_MemoryBarrier(barrierKind);
             break;
         }
+=======
+
+            instGen_MemoryBarrier(barrierKind);
+            break;
+        }
+
+>>>>>>> Stashed changes
 #ifdef TARGET_ARM64
         case GT_XCHG:
         case GT_XORR:
@@ -797,6 +805,12 @@ void CodeGen::genCodeForTreeNode(GenTree* treeNode)
 #endif // SWIFT_SUPPORT
 
         case GT_RELOAD:
+<<<<<<< Updated upstream
+=======
+            // do nothing - reload is just a marker.
+            // The parent node will call genConsumeReg on this which will trigger the unspill of this node's child
+            // into the register specified in this node.
+>>>>>>> Stashed changes
             break;
 
         case GT_NOP:
@@ -805,6 +819,10 @@ void CodeGen::genCodeForTreeNode(GenTree* treeNode)
         case GT_KEEPALIVE:
             if (treeNode->AsOp()->gtOp1->isContained())
             {
+<<<<<<< Updated upstream
+=======
+                // For this case we simply need to update the lifetime of the local.
+>>>>>>> Stashed changes
                 genUpdateLife(treeNode->AsOp()->gtOp1);
             }
             else
@@ -824,11 +842,19 @@ void CodeGen::genCodeForTreeNode(GenTree* treeNode)
 //        case GT_PHYSREG:
 //            genCodeForPhysReg(treeNode->AsPhysReg());
 //            break;
+<<<<<<< Updated upstream
 
         case GT_NULLCHECK:
             genCodeForNullCheck(treeNode->AsIndir());
             break;
 //
+=======
+//
+        case GT_NULLCHECK:
+            genCodeForNullCheck(treeNode->AsIndir());
+            break;
+
+>>>>>>> Stashed changes
 //        case GT_CATCH_ARG:
 //
 //            noway_assert(handlerGetsXcptnObj(compiler->compCurBB->bbCatchTyp));
@@ -1899,11 +1925,17 @@ void CodeGen::genCodeForPhysReg(GenTreePhysReg* tree)
 //
 void CodeGen::genCodeForNullCheck(GenTreeIndir* tree)
 {
+<<<<<<< Updated upstream
     assert(tree->OperIs(GT_NULLCHECK));
     genConsumeRegs(tree->gtOp1);
     regNumber addrReg = tree->gtOp1->GetRegNum();
     GetEmitter()->emitIns_R_R_I(ins_Load(tree->TypeGet()),
         emitActualTypeSize(tree), REG_R0, addrReg, 0);
+=======
+    assert(tree->gtOper == GT_NULLCHECK);
+    regNumber addrReg = genConsumeReg(tree->gtOp1);
+    GetEmitter()->emitIns_R_R_I(INS_lg, EA_8BYTE, REG_R0, addrReg, 0);
+>>>>>>> Stashed changes
 }
 
 //------------------------------------------------------------------------
