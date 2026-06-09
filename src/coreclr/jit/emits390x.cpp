@@ -8647,14 +8647,8 @@ void emitter::emitIns_Call(EmitCallType          callType,
             assert(addr == nullptr || codeGen->validImmForBL((ssize_t)addr));
             // Set target address
             id->idAddr()->iiaAddr = (BYTE*)addr;
-	    //if (emitComp->opts.compReloc)
-            //{
-                // Since this is an indirect call through a pointer and we don't
-                // currently pass in emitAttr into this function we have decided
-                // to always mark the displacement as being relocatable.
 
-                id->idSetIsDspReloc();
-            //}
+            id->idSetIsDspReloc();
             break;
 
         case EC_INDIR_R:
