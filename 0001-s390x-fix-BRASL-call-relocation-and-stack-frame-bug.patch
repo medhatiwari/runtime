@@ -1,0 +1,120 @@
+From b806f5ba5543d85824a22474a34189b902a5c993 Mon Sep 17 00:00:00 2001
+From: Medha Tiwari <medhavns1@gmail.com>
+Date: Fri, 5 Jun 2026 11:48:34 +0200
+Subject: [PATCH] s390x: fix BRASL call relocation and stack frame bug
+
+---
+ src/coreclr/inc/corinfo.h         |  2 ++
+ src/coreclr/jit/codegencommon.cpp |  2 +-
+ src/coreclr/jit/emits390x.cpp     | 14 +++++++++-----
+ src/coreclr/pal/inc/rt/ntimage.h  |  5 +++++
+ src/coreclr/vm/jitinterface.cpp   | 18 ++++++++++++++++++
+ 5 files changed, 35 insertions(+), 6 deletions(-)
+
+diff --git a/src/coreclr/inc/corinfo.h b/src/coreclr/inc/corinfo.h
+index cab2f6c71d7..5fdf8ec7028 100644
+--- a/src/coreclr/inc/corinfo.h
++++ b/src/coreclr/inc/corinfo.h
+@@ -3350,6 +3350,8 @@ public:
+ //
+ #define IMAGE_REL_BASED_REL_THUMB_MOV32_PCREL   0x14
+ 
++#define IMAGE_REL_S390X_PC32DBL                 0x15
++
+ /**********************************************************************************/
+ #ifdef TARGET_64BIT
+ #define USE_PER_FRAME_PINVOKE_INIT
+diff --git a/src/coreclr/jit/codegencommon.cpp b/src/coreclr/jit/codegencommon.cpp
+index 88ce182a553..325dcae1eea 100644
+--- a/src/coreclr/jit/codegencommon.cpp
++++ b/src/coreclr/jit/codegencommon.cpp
+@@ -5558,7 +5558,7 @@ void CodeGen::genFnProlog()
+     //
+     //-------------------------------------------------------------------------
+ 
+-#if !defined(TARGET_ARM64) && !defined(TARGET_LOONGARCH64) && !defined(TARGET_RISCV64)
++#if !defined(TARGET_ARM64) && !defined(TARGET_LOONGARCH64) && !defined(TARGET_RISCV64) && !defined(TARGET_S390X)
+     regMaskTP maskStackAlloc = RBM_NONE;
+ 
+ #ifdef TARGET_ARM
+diff --git a/src/coreclr/jit/emits390x.cpp b/src/coreclr/jit/emits390x.cpp
+index b2234ae356f..c95acac623b 100644
+--- a/src/coreclr/jit/emits390x.cpp
++++ b/src/coreclr/jit/emits390x.cpp
+@@ -10764,10 +10764,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
+             //imm = id->idAddr()->iiaGetJitDataOffset();
+             if (id->idIsCall())
+             {
+-    		void* addr = id->idAddr()->iiaAddr;
+     		imm = 0;
+-
+-    		//emitHandleRelocation(addr);
+ 	    }
+ 	    else
+ 	    {
+@@ -10776,8 +10773,15 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
+             op = emitInsCode(ins, fmt);
+             assert((id->idReg1() >= 0) && (id->idReg1() <= 15));
+             assert((imm >= -0x80000000LL) && (imm <= 0x7FFFFFFFLL));
+-
+-            S390_RIL_b(dst, op, id->idReg1(), imm);
++            {
++                BYTE* braslStart = dst;
++                S390_RIL_b(dst, op, id->idReg1(), imm);
++               
++                if (id->idIsDspReloc())
++                {
++                    emitRecordRelocation((void*)(braslStart + 2),id->idAddr()->iiaAddr,IMAGE_REL_S390X_PC32DBL);
++                }
++            }
+             break; 
+         case INS_basr:
+             op = emitInsCode(ins, fmt);
+diff --git a/src/coreclr/pal/inc/rt/ntimage.h b/src/coreclr/pal/inc/rt/ntimage.h
+index 8421fd96b60..cb5819fa712 100644
+--- a/src/coreclr/pal/inc/rt/ntimage.h
++++ b/src/coreclr/pal/inc/rt/ntimage.h
+@@ -1027,6 +1027,11 @@ typedef IMAGE_RELOCATION UNALIGNED *PIMAGE_RELOCATION;
+ //
+ #define IMAGE_REL_RISCV64_PC            0x0003
+ 
++//
++// S390X relocation types
++//
++#define IMAGE_REL_S390X_PC32DBL         0x0003  // 32-bit PC-relative offset in halfwords
++
+ //
+ // CEF relocation types.
+ //
+diff --git a/src/coreclr/vm/jitinterface.cpp b/src/coreclr/vm/jitinterface.cpp
+index 29feba7a9bf..f5b24e2688c 100644
+--- a/src/coreclr/vm/jitinterface.cpp
++++ b/src/coreclr/vm/jitinterface.cpp
+@@ -11511,6 +11511,24 @@ void CEEJitInfo::recordRelocation(void * location,
+ 
+ #endif // TARGET_LOONGARCH64
+ 
++#ifdef TARGET_S390X
++    case IMAGE_REL_S390X_PC32DBL:
++        {
++            _ASSERTE(addlDelta == 0);
++            // location points to the 4-byte displacement field (bytes 2-5 of BRASL).
++            // The CPU uses PC of the instruction (byte 0), which is 2 bytes before.
++            INT64 instrAddr = (INT64)location - 2;
++            delta = (INT64)target - instrAddr;
++            // s390x branch targets are always halfword-aligned
++            _ASSERTE((delta & 1) == 0);
++            delta = delta / 2;
++            _ASSERTE(delta >= (INT64)INT32_MIN && delta <= (INT64)INT32_MAX);
++            *((INT32*)locationRW) = (INT32)delta;
++        }
++        break;
++#endif // TARGET_S390X
++
++
+     default:
+         _ASSERTE(!"Unknown reloc type");
+         break;
+-- 
+2.47.1
+
