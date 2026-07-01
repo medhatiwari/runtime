@@ -10054,7 +10054,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
 
         case INS_st:
             imm = emitGetInsSC(id); //get instruction's constant value
-            assert((imm >= 0) && (imm <= 2047)); // 11 bit imm unsigned value
+            assert((imm >= 0) && (imm <=4095)); 
             op = emitInsCode(ins, fmt);
             S390_RX_a(dst, op, id->idReg1(), 0, id->idReg2(), imm);
             break;
@@ -10062,6 +10062,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         case INS_stg:
             op = emitInsCode(ins, fmt);
             imm = emitGetInsSC(id);
+            assert((imm >= -524288) && (imm <= 524287));
             S390_RXY_a(dst, op, id->idReg1(), 0, id->idReg2(), imm);
             break;
 
