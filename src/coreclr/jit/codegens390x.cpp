@@ -5780,12 +5780,28 @@ void CodeGen::genZeroInitFrame(unsigned frameSize, regNumber initReg, bool* pIni
 
     regNumber rZero = REG_R0;
     regNumber rAddr = (initReg != REG_NA) ? initReg : REG_R1;
+    regNumber rTmpAddr = (rAddr != REG_R1) ? REG_R1 : REG_R2;
 
     // Zero out r0: xgr r0, r0
     GetEmitter()->emitIns_R_R(INS_xgr, EA_8BYTE, rZero, rZero);
 
     // Get frame start address: lay rAddr, 0(r15)
     GetEmitter()->emitIns_R_R_I(INS_lay, EA_PTRSIZE, rAddr, REG_SPBASE, 0);
+
+    // Emit zero store; if displacement is out of encodable RXY range, materialize
+    // full address in a temp register (iihf/iilf sequence via instGen_Set_Reg_To_Imm)
+    // and store with displacement 0.
+    auto emitZeroStore = [&](instruction ins, emitAttr attr, int offset) {
+        if (emitter::emitIns_valid_imm_for_ldst_offset(offset, attr))
+        {
+            GetEmitter()->emitIns_R_R_I(ins, attr, rZero, rAddr, offset);
+            return;
+        }
+
+        instGen_Set_Reg_To_Imm(EA_PTRSIZE, rTmpAddr, offset);
+        GetEmitter()->emitIns_R_R(INS_agr, EA_PTRSIZE, rTmpAddr, rAddr);
+        GetEmitter()->emitIns_R_R_I(ins, attr, rZero, rTmpAddr, 0);
+    };
 
     // Simple approach: Just store zeros in a loop (unrolled)
     unsigned numDoubleWords = frameSize / 8;
@@ -6048,13 +6064,13 @@ void CodeGen::genZeroInitFrameUsingBlockInit(int untrLclHi, int untrLclLo, regNu
 
     if ((offset + (int)sizeof(int)) <= untrLclHi)
     {
-        GetEmitter()->emitIns_R_R_I(INS_st, EA_4BYTE, zeroReg, genFramePointerReg(), offset);
+        GetEmitter()->emitIns_R_R_I(INS_sty, EA_4BYTE, zeroReg, genFramePointerReg(), offset);
         offset += sizeof(int);
     }
 
     while (offset < untrLclHi)
     {
-        GetEmitter()->emitIns_R_R_I(INS_stc, EA_1BYTE, zeroReg, genFramePointerReg(), offset);
+        GetEmitter()->emitIns_R_R_I(INS_stcy, EA_1BYTE, zeroReg, genFramePointerReg(), offset);
         offset++;
     }
 }
