@@ -1749,7 +1749,8 @@ emitter::code_t emitter::emitInsCode(instruction ins, insFormat fmt)
 // true if this 'imm' can be encoded as the offset in a ldr/str instruction
 /*static*/ bool emitter::emitIns_valid_imm_for_ldst_offset(INT64 imm, emitAttr attr)
 {
-    _ASSERTE(!"NYI");
+    (void)attr;
+    return isValidSimm<20>(imm);
 #if 0
     if (imm == 0)
         return true; // Encodable using IF_LS_2A

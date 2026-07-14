@@ -5788,21 +5788,6 @@ void CodeGen::genZeroInitFrame(unsigned frameSize, regNumber initReg, bool* pIni
     // Get frame start address: lay rAddr, 0(r15)
     GetEmitter()->emitIns_R_R_I(INS_lay, EA_PTRSIZE, rAddr, REG_SPBASE, 0);
 
-    // Emit zero store; if displacement is out of encodable RXY range, materialize
-    // full address in a temp register (iihf/iilf sequence via instGen_Set_Reg_To_Imm)
-    // and store with displacement 0.
-    auto emitZeroStore = [&](instruction ins, emitAttr attr, int offset) {
-        if (emitter::emitIns_valid_imm_for_ldst_offset(offset, attr))
-        {
-            GetEmitter()->emitIns_R_R_I(ins, attr, rZero, rAddr, offset);
-            return;
-        }
-
-        instGen_Set_Reg_To_Imm(EA_PTRSIZE, rTmpAddr, offset);
-        GetEmitter()->emitIns_R_R(INS_agr, EA_PTRSIZE, rTmpAddr, rAddr);
-        GetEmitter()->emitIns_R_R_I(ins, attr, rZero, rTmpAddr, 0);
-    };
-
     // Simple approach: Just store zeros in a loop (unrolled)
     unsigned numDoubleWords = frameSize / 8;
     unsigned remainder = frameSize % 8;
@@ -6053,8 +6038,28 @@ void CodeGen::genZeroInitFrameUsingBlockInit(int untrLclHi, int untrLclLo, regNu
     assert(genUseBlockInit);
     assert(untrLclHi > untrLclLo);
 
-    regNumber zeroReg = genGetZeroReg(initReg, pInitRegZeroed);
+    regNumber zeroReg  = genGetZeroReg(initReg, pInitRegZeroed);
+    regNumber frameReg = genFramePointerReg();
+    // Scratch for out-of-range displacements; must not clobber the zero register
+    regNumber rTmpAddr = (zeroReg != REG_R1) ? REG_R1 : REG_R2;
     int       offset  = untrLclLo;
+
+    // Emit zero store via RXY (stg/sty/stcy). If the displacement is outside the
+    // encodable 20-bit signed range, materialize FP+offset in a temp and store at disp 0.
+    auto emitZeroStore = [&](instruction ins, emitAttr attr, int offs) {
+        if (emitter::emitIns_valid_imm_for_ldst_offset(offs, attr))
+        {
+            GetEmitter()->emitIns_R_R_I(ins, attr, zeroReg, frameReg, offs);
+            return;
+        }
+        if (rTmpAddr == initReg)
+        {
+            *pInitRegZeroed = false;
+        }
+        instGen_Set_Reg_To_Imm(EA_PTRSIZE, rTmpAddr, offs);
+        GetEmitter()->emitIns_R_R(INS_agr, EA_PTRSIZE, rTmpAddr, frameReg);
+        GetEmitter()->emitIns_R_R_I(ins, attr, zeroReg, rTmpAddr, 0);
+    };
 
     while ((offset + (int)REGSIZE_BYTES) <= untrLclHi)
     {
