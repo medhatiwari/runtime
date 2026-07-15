@@ -96,6 +96,47 @@ static bool strictArmAsm;
     dst += emitOutputLong(dst, ((opc << 24) | ((r1) << 20) |((r3) << 16) | ((b2) << 12) | ((d2) & 0xfff)));    \
 }
 
+#define S390_NOP2(dst)                                                  \
+{                                                                       \
+    dst += emitOutputWord(dst, 0x0700);                                 \
+}
+
+#define S390_VRR_c(dst, opc, v1, v2, v3, m6, m5, m4, rxb)              \
+{                                                                       \
+    dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((v1 & 0xf) << 4) | (v2 & 0xf))); \
+    dst += emitOutputLong(dst, (((v3 & 0xf) << 28) | ((m6) << 24) |    \
+                          ((m5) << 20) | ((m4) << 16) |                 \
+                          ((rxb) << 8) | (opc & 0xff)));                \
+}
+
+#define S390_VRR_a(dst, opc, v1, v2, m5, m4, m3, rxb)                  \
+{                                                                       \
+    dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((v1 & 0xf) << 4) | (v2 & 0xf))); \
+    dst += emitOutputLong(dst, (((m5) << 24) | ((m4) << 20) |          \
+                          ((m3) << 16) | ((rxb) << 8) | (opc & 0xff))); \
+}
+
+#define S390_VRX(dst, opc, v1, x2, b2, d2, m3, rxb)                    \
+{                                                                       \
+    dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((v1 & 0xf) << 4) | (x2 & 0xf))); \
+    dst += emitOutputLong(dst, (((b2 & 0xf) << 28) | (((d2) & 0xfff) << 16) | \
+                          ((m3) << 12) | ((rxb) << 8) | (opc & 0xff))); \
+}
+
+#define S390_VRS_b(dst, opc, v1, r3, b2, d2, m4, rxb)                  \
+{                                                                       \
+    dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((v1 & 0xf) << 4) | (r3 & 0xf))); \
+    dst += emitOutputLong(dst, (((b2 & 0xf) << 28) | (((d2) & 0xfff) << 16) | \
+                          ((m4) << 12) | ((rxb) << 8) | (opc & 0xff))); \
+}
+
+#define S390_VRS_c(dst, opc, r1, v3, b2, d2, m4, rxb)                  \
+{                                                                       \
+    dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((r1 & 0xf) << 4) | (v3 & 0xf))); \
+    dst += emitOutputLong(dst, (((b2 & 0xf) << 28) | (((d2) & 0xfff) << 16) | \
+                          ((m4) << 12) | ((rxb) << 8) | (opc & 0xff))); \
+}
+
 /************************************************************************/
 /*         Routines that compute the size of / encode instructions      */
 /************************************************************************/
@@ -1225,6 +1266,27 @@ inline static bool isLowVectorRegister(regNumber reg)
 inline static bool isFloatReg(regNumber reg)
 {
     return isVectorRegister(reg);
+}
+
+inline static bool isHighVectorRegister(regNumber reg)
+{
+    return (reg >= REG_V16 && reg <= REG_V31);
+}
+
+inline static bool needsVectorEncoding(regNumber reg1, regNumber reg2)
+{
+    return isHighVectorRegister(reg1) || isHighVectorRegister(reg2);
+}
+
+static uint8_t calcRXB(regNumber v1, regNumber v2 = REG_V0,
+                       regNumber v3 = REG_V0, regNumber v4 = REG_V0)
+{
+    uint8_t rxb = 0;
+    if (((unsigned)v1 - (unsigned)REG_V0) >= 16) rxb |= 0x08;
+    if (((unsigned)v2 - (unsigned)REG_V0) >= 16) rxb |= 0x04;
+    if (((unsigned)v3 - (unsigned)REG_V0) >= 16) rxb |= 0x02;
+    if (((unsigned)v4 - (unsigned)REG_V0) >= 16) rxb |= 0x01;
+    return rxb;
 }
 
 
