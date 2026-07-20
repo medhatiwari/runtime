@@ -399,6 +399,13 @@ void CodeGen::genCodeForLclVar(GenTreeLclVar* tree)
         // targetType must be a normal scalar type and not a TYP_STRUCT
         assert(targetType != TYP_STRUCT);
 
+#ifdef TARGET_S390X
+        if (varDsc->lvIsParam && !varDsc->lvIsRegArg)
+        {
+            targetType = varDsc->GetStackSlotHomeType();
+        }
+#endif
+
         instruction ins  = ins_Load(targetType);
         emitAttr    attr = emitActualTypeSize(targetType);
 
@@ -751,10 +758,10 @@ void CodeGen::genCodeForTreeNode(GenTree* treeNode)
 //            assert(!"LIST, FIELD_LIST nodes should always be marked contained.");
 //            break;
 //
-//        case GT_PUTARG_STK:
-//            genPutArgStk(treeNode->AsPutArgStk());
-//            break;
-//
+        case GT_PUTARG_STK:
+            genPutArgStk(treeNode->AsPutArgStk());
+            break;
+
 //        case GT_PUTARG_REG:
 //            genPutArgReg(treeNode->AsOp());
 //            break;
@@ -3167,12 +3174,26 @@ void CodeGen::genCall(GenTreeCall* call)
 
     JITDUMP("Call generation complete\n");
 }
+
+/*****************************************************************************
+ * genPutArgStk: Generate code for GT_PUTARG_STK node
+ */
+void CodeGen::genPutArgStk(GenTreePutArgStk* treeNode)
+{
+    assert(treeNode->OperIs(GT_PUTARG_STK));
+    GenTree*  src    = treeNode->Data();
+    unsigned  offset = treeNode->getArgOffset();
+    genPutArgStk(src, offset);
+}
+
 /*****************************************************************************
  * Helper: Put a single argument on the stack
  */
 
 void CodeGen::genPutArgStk(GenTree* arg, unsigned offset)
 {
+    offset += 160;  // Z ABI: skip register save area
+
     var_types type = arg->TypeGet();
     emitAttr  size = emitTypeSize(type);
 
@@ -3194,8 +3215,8 @@ void CodeGen::genPutArgStk(GenTree* arg, unsigned offset)
             {
                 GetEmitter()->emitIns_R_I(INS_lgfi, EA_8BYTE, tempReg, value);
             }
-
-            GetEmitter()->emitIns_R_R_I(INS_stg, size, tempReg,
+            instruction storeIns = INS_stg;
+            GetEmitter()->emitIns_R_R_I(storeIns, size, tempReg,
                                        REG_SPBASE, offset);
         }
         else
