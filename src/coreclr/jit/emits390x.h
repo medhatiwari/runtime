@@ -96,11 +96,6 @@ static bool strictArmAsm;
     dst += emitOutputLong(dst, ((opc << 24) | ((r1) << 20) |((r3) << 16) | ((b2) << 12) | ((d2) & 0xfff)));    \
 }
 
-#define S390_NOP2(dst)                                                  \
-{                                                                       \
-    dst += emitOutputWord(dst, 0x0700);                                 \
-}
-
 #define S390_VRR_c(dst, opc, v1, v2, v3, m6, m5, m4, rxb)              \
 {                                                                       \
     dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((v1 & 0xf) << 4) | (v2 & 0xf))); \
