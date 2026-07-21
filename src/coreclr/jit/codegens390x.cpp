@@ -399,12 +399,10 @@ void CodeGen::genCodeForLclVar(GenTreeLclVar* tree)
         // targetType must be a normal scalar type and not a TYP_STRUCT
         assert(targetType != TYP_STRUCT);
 
-#ifdef TARGET_S390X
         if (varDsc->lvIsParam && !varDsc->lvIsRegArg)
         {
             targetType = varDsc->GetStackSlotHomeType();
         }
-#endif
 
         instruction ins  = ins_Load(targetType);
         emitAttr    attr = emitActualTypeSize(targetType);
@@ -3192,7 +3190,7 @@ void CodeGen::genPutArgStk(GenTreePutArgStk* treeNode)
 
 void CodeGen::genPutArgStk(GenTree* arg, unsigned offset)
 {
-    offset += 160;  // Z ABI: skip register save area
+    offset += S390X_REG_SAVE_AREA_SIZE; 
 
     var_types type = arg->TypeGet();
     emitAttr  size = emitTypeSize(type);
@@ -3215,8 +3213,7 @@ void CodeGen::genPutArgStk(GenTree* arg, unsigned offset)
             {
                 GetEmitter()->emitIns_R_I(INS_lgfi, EA_8BYTE, tempReg, value);
             }
-            instruction storeIns = INS_stg;
-            GetEmitter()->emitIns_R_R_I(storeIns, size, tempReg,
+            GetEmitter()->emitIns_R_R_I(INS_stg, size, tempReg,
                                        REG_SPBASE, offset);
         }
         else
