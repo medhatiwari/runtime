@@ -3234,7 +3234,7 @@ void CodeGen::genPutArgStk(GenTree* arg, unsigned offset)
 
         if (varTypeIsFloating(type))
         {
-            storeIns = (type == TYP_FLOAT) ? INS_ste : INS_std;
+            storeIns = (type == TYP_FLOAT) ? INS_stey : INS_stdy;
         }
         else
         {
