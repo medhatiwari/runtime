@@ -274,7 +274,7 @@
   #define RET_BUFF_ARGNUM          5
 
   #define MAX_REG_ARG              5
-  #define MAX_FLOAT_REG_ARG        8
+  #define MAX_FLOAT_REG_ARG        4
 
   #define REG_ARG_FIRST            REG_R2
   #define REG_ARG_LAST             REG_R6
