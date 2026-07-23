@@ -3026,7 +3026,7 @@ void CodeGen::genCall(GenTreeCall* call)
     {
         // User function calls kill all caller-saved registers
         // caller-saved: r0-r5, r14, f0-f7
-        killMask = RBM_INT_CALLEE_TRASH | RBM_R14 | RBM_FLT_CALLEE_TRASH;
+        killMask = RBM_CALLEE_TRASH | RBM_R14;
     }
 
     if (callType == CT_INDIRECT)

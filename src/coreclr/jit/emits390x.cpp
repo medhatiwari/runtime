@@ -4535,6 +4535,9 @@ void emitter::emitIns_R_R(instruction     ins,
             case INS_lcebr: ins = INS_wflcsb; break;
             case INS_lcdbr: ins = INS_wflcdb; break;
             case INS_ldgr:  ins = INS_vlvgg;  break;
+            case INS_sqebr: ins = INS_wfsqsb; break;
+            case INS_sqdbr: ins = INS_wfsqdb; break;
+            case INS_lgdr:  ins = INS_vlgvg;  break;
             default: break;
         }
     }
@@ -10481,6 +10484,25 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             S390_VRR_a(dst, op, v1, v2, 0, 8, 3, rxb);
             break;
         }
+
+        case INS_wfsqsb:
+        {
+            op = emitInsCode(ins, fmt);
+            uint8_t v1 = (id->idReg1() - REG_V0) & 0xf;
+            uint8_t v2 = (id->idReg2() - REG_V0) & 0xf;
+            uint8_t rxb = calcRXB(id->idReg1(), id->idReg2());
+            S390_VRR_a(dst, op, v1, v2, 0, 0, 2, rxb);
+            break;
+        }
+        case INS_wfsqdb:
+        {
+            op = emitInsCode(ins, fmt);
+            uint8_t v1 = (id->idReg1() - REG_V0) & 0xf;
+            uint8_t v2 = (id->idReg2() - REG_V0) & 0xf;
+            uint8_t rxb = calcRXB(id->idReg1(), id->idReg2());
+            S390_VRR_a(dst, op, v1, v2, 0, 0, 3, rxb);
+            break;
+        }
         
         case INS_vlvgg:
         {
@@ -10488,6 +10510,16 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             unsigned v1 = (id->idReg1() - REG_V0) & 0xf;
             uint8_t rxb = calcRXB(id->idReg1());
             S390_VRS_b(dst, op, v1, id->idReg2(), 0, 0, 0, rxb);
+            break;
+        }
+
+        case INS_vlgvg:
+        {
+            op = emitInsCode(ins, fmt);
+            uint8_t r1 = id->idReg1();
+            uint8_t v3 = (id->idReg2() - REG_V0) & 0xf;
+            uint8_t rxb = calcRXB(REG_V0, REG_V0, id->idReg2());
+            S390_VRS_c(dst, op, r1, v3, 0, 0, 3, rxb);
             break;
         }
         
