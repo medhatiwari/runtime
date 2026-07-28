@@ -10451,7 +10451,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             unsigned v1 = (id->idReg1() - REG_V0) & 0xf;
             unsigned v2 = (id->idReg2() - REG_V0) & 0xf;
             uint8_t rxb = calcRXB(id->idReg1(), id->idReg2());
-            S390_VRR_a(dst, op, v1, v2, 0, 2, 0, rxb);
+            S390_VRR_a(dst, op, v1, v2, 0, 0, 2, rxb);
             break;
         }
         
@@ -10461,7 +10461,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             unsigned v1 = (id->idReg1() - REG_V0) & 0xf;
             unsigned v2 = (id->idReg2() - REG_V0) & 0xf;
             uint8_t rxb = calcRXB(id->idReg1(), id->idReg2());
-            S390_VRR_a(dst, op, v1, v2, 0, 3, 0, rxb);
+            S390_VRR_a(dst, op, v1, v2, 0, 0, 3, rxb);
             break;
         }
         
@@ -10509,7 +10509,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             op = emitInsCode(ins, fmt);
             unsigned v1 = (id->idReg1() - REG_V0) & 0xf;
             uint8_t rxb = calcRXB(id->idReg1());
-            S390_VRS_b(dst, op, v1, id->idReg2(), 0, 0, 0, rxb);
+            S390_VRS_b(dst, op, v1, id->idReg2(), 0, 0, 3, rxb);
             break;
         }
 

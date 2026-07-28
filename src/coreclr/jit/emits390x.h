@@ -99,16 +99,18 @@ static bool strictArmAsm;
 #define S390_VRR_c(dst, opc, v1, v2, v3, m6, m5, m4, rxb)              \
 {                                                                       \
     dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((v1 & 0xf) << 4) | (v2 & 0xf))); \
-    dst += emitOutputLong(dst, (((v3 & 0xf) << 28) | ((m6) << 24) |    \
-                          ((m5) << 20) | ((m4) << 16) |                 \
-                          ((rxb) << 8) | (opc & 0xff)));                \
+    dst += emitOutputLong(dst, (((v3 & 0xf) << 28) |                   \
+                          ((m6 & 0xf) << 20) | ((m5 & 0xf) << 16) |    \
+                          ((m4 & 0xf) << 12) | ((rxb & 0xf) << 8) |    \
+                          (opc & 0xff)));                               \
 }
 
-#define S390_VRR_a(dst, opc, v1, v2, m5, m4, m3, rxb)                  \
+#define S390_VRR_a(dst, opc, v1, v2, m4, m5, m3, rxb)                  \
 {                                                                       \
     dst += emitOutputWord(dst, (((opc >> 8) << 8) | ((v1 & 0xf) << 4) | (v2 & 0xf))); \
-    dst += emitOutputLong(dst, (((m5) << 24) | ((m4) << 20) |          \
-                          ((m3) << 16) | ((rxb) << 8) | (opc & 0xff))); \
+    dst += emitOutputLong(dst, (((m4 & 0xf) << 20) | ((m5 & 0xf) << 16) |  \
+                          ((m3 & 0xf) << 12) | ((rxb & 0xf) << 8) |    \
+                          (opc & 0xff)));                               \
 }
 
 #define S390_VRX(dst, opc, v1, x2, b2, d2, m3, rxb)                    \
