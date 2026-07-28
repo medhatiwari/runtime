@@ -4445,6 +4445,13 @@ var_types LclVarDsc::GetStackSlotHomeType() const
         }
     }
 
+
+#ifdef TARGET_S390X
+    if (lvIsParam && !lvIsRegArg && genActualType(GetRegisterType()) == TYP_INT)
+    {
+        return TYP_LONG;
+    }
+#endif
     return genActualType(GetRegisterType());
 }
 
@@ -5845,6 +5852,21 @@ void Compiler::lvaFixVirtualFrameOffsets()
         }
     }
 
+#ifdef TARGET_S390X
+    // On s390x, locals use positive SP-relative offsets (starting at 160) and don't need
+    // a delta adjustment. But incoming stack parameters are in the caller's frame at
+    // callerSP + 160 = SP + genTotalFrameSize() + 160. Adjust only those.
+    for (unsigned paramNum = 0; paramNum < info.compArgsCount; paramNum++)
+    {
+        LclVarDsc* paramDsc = lvaGetDesc(paramNum);
+        int offset;
+        if (lvaGetRelativeOffsetToCallerAllocatedSpaceForParameter(paramNum, &offset))
+        {
+            paramDsc->SetStackOffset(paramDsc->GetStackOffset() + codeGen->genTotalFrameSize() + S390X_REG_SAVE_AREA_SIZE);
+        }
+    }
+#endif
+
     assert(codeGen->regSet.tmpAllFree());
     for (TempDsc* temp = codeGen->regSet.tmpListBeg(); temp != nullptr; temp = codeGen->regSet.tmpListNxt(temp))
     {
@@ -7071,8 +7093,13 @@ int Compiler::lvaAllocLocalAndSetVirtualOffset(unsigned lclNum, unsigned size, i
     /* Reserve space on the stack by bumping the frame size */
 
     lvaIncrementFrameSize(size);
+#if defined(TARGET_S390X)
+    lcl->SetStackOffset(stkOffs);
+    stkOffs += size;
+#else
     stkOffs += size;
     lcl->SetStackOffset(stkOffs);
+#endif
 
 #ifdef DEBUG
     if (verbose)

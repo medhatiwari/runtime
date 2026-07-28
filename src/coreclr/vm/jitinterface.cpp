@@ -12418,6 +12418,7 @@ static bool isJitted(MethodDesc* ftnDesc, const char* ftnName)
         "addFour",
         "identityBool",
         "identityChar",
+        "multipleArgs",
     };
 
     // 2D array for class name and function name combinations to exclude from JIT compilation
