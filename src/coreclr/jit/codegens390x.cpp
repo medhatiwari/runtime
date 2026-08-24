@@ -3009,6 +3009,12 @@ void CodeGen::genCall(GenTreeCall* call)
         else
         {
             // Argument passed on stack
+            if (argNode->OperIs(GT_PUTARG_STK))
+            {
+                // GT_PUTARG_STK is a wrapper node already handled by lowering.
+                // Skip to avoid double-processing and emitTypeSize(TYP_VOID) crash.
+                continue;
+            }
             unsigned stackOffset = arg.AbiInfo.ByteOffset;
             genPutArgStk(argNode, stackOffset);
         }
