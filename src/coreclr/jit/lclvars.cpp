@@ -6126,8 +6126,9 @@ void Compiler::lvaAssignVirtualFrameOffsetsToLocals()
     // (1) Account for things that are set up by the prolog and undone by the epilog.
     //
 #if defined TARGET_S390X
-    int stkOffs              = 160;
-    int originalFrameSize    = 160;
+    int outArgSize           = (int)(unsigned)lvaOutgoingArgSpaceSize;
+    int stkOffs              = 160 + outArgSize;
+    int originalFrameSize    = 160 + outArgSize;
 #else
     int stkOffs              = 0;
     int originalFrameSize    = 0;
@@ -6240,6 +6241,11 @@ void Compiler::lvaAssignVirtualFrameOffsetsToLocals()
 
     assert(compCalleeRegsPushed >= 2); // always FP/RA.
     stkOffs -= (compCalleeRegsPushed << 3);
+
+#elif defined(TARGET_S390X)
+    // Callee-saved registers are stored in the caller's 160-byte register
+    // save area (via stmg), not pushed onto the callee's frame.
+    // No stkOffs adjustment needed here.
 
 #else // !TARGET_LOONGARCH64 && !TARGET_RISCV64
 #ifdef TARGET_ARM
@@ -6943,7 +6949,12 @@ void Compiler::lvaAssignVirtualFrameOffsetsToLocals()
 
     // compLclFrameSize equals our negated virtual stack offset minus the pushed registers and return address
     // and the pushed frame pointer register which for some strange reason isn't part of 'compCalleeRegsPushed'.
+
+#if defined(TARGET_S390X)
+    int pushedCount = 0;
+#else
     int pushedCount = compCalleeRegsPushed;
+#endif
 
 #ifdef TARGET_ARM64
     if (info.compIsVarArgs)
