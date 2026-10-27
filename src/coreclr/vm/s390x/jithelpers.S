@@ -45,27 +45,20 @@ LEAF_ENTRY JIT_PatchedCodeLast, _TEXT
         br %r14
 LEAF_END JIT_PatchedCodeLast, _TEXT
 
-// JIT_ByRefWriteBarrier has weird semantics, see usage in StubLinkerX86.cpp
+//copy one pointer and walk dest/src.
+// No card-table update yet.
 //
-// Entry:
-//   RDI - address of ref-field (assigned to)
-//   RSI - address of the data  (source)
-//
-//   Note: RyuJIT assumes that all volatile registers can be trashed by
-//   the CORINFO_HELP_ASSIGN_BYREF helper (i.e. JIT_ByRefWriteBarrier)
-//   except RDI and RSI. This helper uses and defines RDI and RSI, so
-//   they remain as live GC refs or byrefs, and are not killed.
-//
-//
-//   RCX is trashed
-//   RAX is trashed
-//   R10 is trashed
-//   R11 is trashed on Debug build
-// Exit:
-//   RDI, RSI are incremented by SIZEOF(LPVOID)
+// On entry:
+//   r2 = dest slot address
+//   r3 = source slot address
+// On exit:
+//   *r2 = *r3
+//   r2 += 8
+//   r3 += 8
+//   r1 trashed (same scratch LSRA already kills for this helper)
 LEAF_ENTRY JIT_ByRefWriteBarrier, _TEXT
-        lg      %r0, 0(%r3)
-        stg     %r0, 0(%r2)
+        lg      %r1, 0(%r3)
+        stg     %r1, 0(%r2)
         aghi    %r3, 8
         aghi    %r2, 8
         br      %r14
