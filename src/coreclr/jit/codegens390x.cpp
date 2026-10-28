@@ -4213,7 +4213,10 @@ void CodeGen::instGen_MemoryBarrier(BarrierKind barrierKind)
 */
 }
 
-
+// TODO-S390X: On main, CORINFO_HELP_ASSIGN_BYREF and genCodeForCpObj are gone
+// (https://github.com/dotnet/runtime/pull/128542). Copies go through new
+// lowering (ASSIGN_REF / CHECKED_ASSIGN_REF, bulk barriers). Drop this when
+// we rebase onto main.
 void CodeGen::genCodeForCpObj(GenTreeBlk* cpObjNode)
 {
     GenTree*  dstAddr     = cpObjNode->Addr();
